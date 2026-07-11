@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ICU Ernährung">
+<meta name="theme-color" content="#0d1117">
+<title>ICU Ernährungsrechner</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1117'/%3E%3Cpath d='M40 120 L70 120 L82 60 L98 132 L112 96 L122 120 L140 120' fill='none' stroke='%234ade80' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2530; --line:#2b3440;
+    --txt:#e6edf3; --dim:#8b98a5; --faint:#5b6672;
+    --vital:#4ade80; --vital-dim:#1f3d2b;
+    --amber:#fbbf24; --cyan:#38bdf8; --violet:#a78bfa; --rose:#fb7185;
+    --enteral:#38bdf8; --iv:#a78bfa;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  .mono{font-family:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;font-variant-numeric:tabular-nums;}
+
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0d1117 70%,rgba(13,17,23,0));
+    padding:14px 18px 10px;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .pulse{width:26px;height:18px;flex:none;}
+  .pulse path{stroke:var(--vital);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:120;stroke-dashoffset:120;animation:trace 2.6s ease-in-out infinite;}
+  @keyframes trace{0%{stroke-dashoffset:120}55%{stroke-dashoffset:0}100%{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion:reduce){.pulse path{animation:none;stroke-dashoffset:0}}
+  h1{font-size:16px;font-weight:650;letter-spacing:.2px;margin:0;line-height:1;}
+  .sub{font-size:11px;color:var(--faint);margin-top:3px;letter-spacing:.3px;text-transform:uppercase;}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;padding:6px 14px 10px;position:sticky;top:56px;z-index:19;
+    background:var(--bg);}
+  .tab{flex:1;text-align:center;padding:9px 4px;border-radius:11px;font-size:12.5px;font-weight:600;
+    color:var(--dim);background:var(--panel);border:1px solid transparent;transition:.15s;cursor:pointer;}
+  .tab.on{color:var(--bg);background:var(--vital);border-color:var(--vital);}
+
+  main{padding:2px 14px 40px;}
+  .hidden{display:none;}
+
+  /* product list */
+  .search{width:100%;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
+    color:var(--txt);font-size:15px;margin-bottom:12px;}
+  .search::placeholder{color:var(--faint);}
+  .grouplabel{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);
+    margin:16px 4px 8px;font-weight:700;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 15px;
+    margin-bottom:10px;cursor:pointer;transition:.12s;position:relative;overflow:hidden;}
+  .card:active{transform:scale(.988);background:var(--panel2);}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .card.iv::before{background:var(--iv);}
+  .card.enteral::before{background:var(--enteral);}
+  .cardtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .pname{font-size:15.5px;font-weight:650;}
+  .pkcal{font-size:12px;color:var(--dim);white-space:nowrap;}
+  .proute{font-size:11.5px;color:var(--faint);margin-top:4px;}
+  .macros{display:flex;gap:14px;margin-top:9px;}
+  .macro{font-size:11px;color:var(--dim);}
+  .macro b{color:var(--txt);font-weight:600;}
+
+  /* calculator detail */
+  .backbtn{display:inline-flex;align-items:center;gap:6px;color:var(--vital);font-size:14px;
+    font-weight:600;padding:6px 2px;margin-bottom:6px;cursor:pointer;}
+  .detail-h{font-size:20px;font-weight:700;margin:2px 0 2px;}
+  .detail-route{font-size:12px;color:var(--faint);margin-bottom:16px;}
+
+  .inputwrap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;}
+  .ilabel{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:10px;}
+  .modes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .mode{padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600;background:var(--panel2);
+    color:var(--dim);border:1px solid var(--line);cursor:pointer;transition:.12s;}
+  .mode.on{background:var(--vital-dim);color:var(--vital);border-color:var(--vital);}
+  .mode.disabled{opacity:.32;pointer-events:none;}
+  .bigrow{display:flex;align-items:baseline;gap:10px;}
+  .biginput{flex:1;min-width:0;background:transparent;border:none;color:var(--vital);
+    font-size:46px;font-weight:600;padding:0;width:100%;}
+  .biginput:focus{outline:none;}
+  .bigunit{font-size:16px;color:var(--dim);font-weight:600;white-space:nowrap;}
+  .hint{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.4;}
+
+  /* results */
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .res{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;}
+  .res.full{grid-column:1/3;}
+  .res .rl{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);font-weight:700;}
+  .res .rv{font-size:26px;font-weight:650;margin-top:5px;line-height:1;}
+  .res .ru{font-size:12px;color:var(--dim);margin-left:3px;font-weight:500;}
+  .res.kcal .rv{color:var(--amber);}
+  .res.rate .rv{color:var(--vital);}
+  .res.na .rv{color:var(--faint);font-size:20px;}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .dot.p{background:var(--rose);} .dot.f{background:var(--cyan);} .dot.k{background:var(--violet);}
+
+  .srcbtn{margin-top:14px;font-size:12px;color:var(--dim);text-decoration:underline;cursor:pointer;display:inline-block;}
+  .src{margin-top:10px;font-size:12px;line-height:1.5;color:var(--dim);background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:none;}
+  .src.show{display:block;}
+  .addbtn{margin-top:16px;width:100%;padding:14px;border-radius:13px;background:var(--vital);color:var(--bg);
+    font-size:15px;font-weight:700;border:none;cursor:pointer;}
+  .addbtn:active{opacity:.85;}
+
+  /* balance / tagesbilanz */
+  .empty{text-align:center;color:var(--faint);font-size:14px;padding:60px 20px;line-height:1.6;}
+  .bitem{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:9px;
+    display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;}
+  .bitem::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .bitem.iv::before{background:var(--iv);} .bitem.enteral::before{background:var(--enteral);}
+  .binfo{flex:1;min-width:0;}
+  .bn{font-size:14px;font-weight:600;}
+  .bd{font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .brm{color:var(--rose);font-size:22px;font-weight:400;padding:4px 8px;cursor:pointer;flex:none;}
+  .total{background:linear-gradient(160deg,#1a2620,#161b22);border:1px solid var(--vital-dim);
+    border-radius:16px;padding:18px;margin-top:14px;}
+  .ttl{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--vital);font-weight:700;margin-bottom:14px;}
+  .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .tcell .tl{font-size:11px;color:var(--dim);}
+  .tcell .tv{font-size:24px;font-weight:650;margin-top:3px;}
+  .tcell.kcal .tv{color:var(--amber);}
+  .clearbtn{margin-top:14px;width:100%;padding:12px;border-radius:12px;background:transparent;
+    border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:600;cursor:pointer;}
+
+  .disc{font-size:10.5px;color:var(--faint);line-height:1.5;margin-top:22px;padding:0 2px;}
+  .foot{height:20px;}
+
+  /* citrat */
+  .bitem.citrat::before{background:var(--rose);}
+  .cit-toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;cursor:pointer;}
+  .cit-toggle.on{border-color:var(--rose);background:linear-gradient(160deg,#25171c,#161b22);}
+  .ct-title{font-size:15.5px;font-weight:650;}
+  .ct-sub{font-size:12px;color:var(--faint);margin-top:3px;}
+  .switch{width:48px;height:28px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);
+    position:relative;flex:none;transition:.18s;}
+  .switch.on{background:var(--rose);border-color:var(--rose);}
+  .knob{width:22px;height:22px;border-radius:50%;background:#e6edf3;position:absolute;top:2px;left:2px;transition:.18s;}
+  .switch.on .knob{left:23px;}
+  .faded{opacity:.32;}
+  .bigresult{background:linear-gradient(160deg,#25171c,#161b22);border:1px solid var(--rose);
+    border-radius:16px;padding:18px;margin-bottom:14px;}
+  .br-l{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--rose);font-weight:700;}
+  .br-v{font-size:42px;font-weight:650;color:var(--rose);margin-top:6px;line-height:1;}
+  .br-u{font-size:15px;color:var(--dim);margin-left:8px;font-weight:500;}
+  .seg{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px;}
+  .segbtn{flex:1;text-align:center;padding:9px;border-radius:9px;font-size:13px;font-weight:600;color:var(--dim);cursor:pointer;transition:.12s;}
+  .segbtn.on{background:var(--rose);color:var(--bg);}
+  .preset{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel);
+    border:1px solid var(--line);border-radius:13px;padding:14px 15px;margin-bottom:9px;cursor:pointer;transition:.12s;}
+  .preset.on{border-color:var(--rose);background:linear-gradient(160deg,#25171c,#161b22);}
+  .preset .pl{font-size:14.5px;font-weight:600;}
+  .preset .pd{font-size:11.5px;color:var(--faint);margin-top:3px;}
+  .preset .pv{font-size:15px;font-weight:650;color:var(--rose);white-space:nowrap;}
+  .numrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .numrow:last-of-type{border-bottom:none;}
+  .numlabel{font-size:14px;font-weight:600;}
+  .numlabel span{display:block;font-size:11px;color:var(--faint);font-weight:400;margin-top:2px;}
+  .numin{width:110px;text-align:right;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;color:var(--vital);font-size:20px;font-weight:600;}
+  .numin:focus{outline:none;border-color:var(--vital);}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg class="pulse" viewBox="0 0 52 26"><path d="M2 15 H16 L20 6 L26 22 L31 12 L34 15 H50"/></svg>
+    <div>
+      <h1>ICU Ernährungsrechner</h1>
+      <div class="sub">Laufrate · Kalorien · Makronährstoffe</div>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab on" data-tab="products" onclick="showTab('products')">Produkte</div>
+  <div class="tab" data-tab="citrat" onclick="showTab('citrat')">Citrat <span id="citbadge"></span></div>
+  <div class="tab" data-tab="balance" onclick="showTab('balance')">Bilanz <span id="balcount"></span></div>
+</div>
+
+<main>
+  <!-- PRODUCT LIST -->
+  <section id="tab-products">
+    <input class="search" id="search" placeholder="Produkt suchen…" oninput="renderList()">
+    <div id="list"></div>
+    <p class="disc" id="disc"></p>
+  </section>
+
+  <!-- DETAIL / CALCULATOR -->
+  <section id="tab-detail" class="hidden"></section>
+
+  <!-- CITRAT -->
+  <section id="tab-citrat" class="hidden">
+    <div id="citratbody"></div>
+  </section>
+
+  <!-- BALANCE -->
+  <section id="tab-balance" class="hidden">
+    <div id="balancelist"></div>
+  </section>
+  <div class="foot"></div>
+</main>
+
+<script>
+const H = 24; // hours
+
+// ---- Product data (identical to the Excel tool) ----
+// perMl values are grams per ml (or kcal per ml for kcal)
+const PRODUCTS = [
+  {id:"olimel", name:"Olimel 5,7% E", route:"i.v. · ZVK · 3-Kammer-Beutel", type:"iv",
+   kcal:1600/1500, prot:85.4/1500, fat:60/1500, cho:165/1500,
+   src:"Baxter / Klinikvergleich (Uniklinik Freiburg): 1500 ml enthalten 1600 kcal, 85,4 g Aminosäuren, 60 g Fett, 165 g Glucose. Nur zentralvenöse Gabe."},
+  {id:"g40", name:"Glukose 40%", route:"i.v. · nur ZVK · hochosmolar", type:"iv",
+   kcal:1.6, prot:0, fat:0, cho:0.4,
+   src:"Fachinformation Glucose 40% B. Braun/Baxter: 40 g Glucose/100 ml, 4 kcal/g → 160 kcal/100 ml."},
+  {id:"g20", name:"Glukose 20%", route:"i.v. · nur ZVK · hochosmolar", type:"iv",
+   kcal:0.8, prot:0, fat:0, cho:0.2,
+   src:"Fachinformation Glucose 20% B. Braun: 20 g Glucose/100 ml, 4 kcal/g → 80 kcal/100 ml."},
+  {id:"g5", name:"Glukose 5%", route:"i.v. · Trägerlösung Kurzinfusionen/Perfusoren", type:"iv",
+   kcal:0.2, prot:0, fat:0, cho:0.05,
+   src:"Fachinformation Glucose 5%: 5 g Glucose/100 ml, 4 kcal/g → 20 kcal/100 ml (200 kcal/Liter). Häufige Trägerlösung – oft unterschätzte Kalorien."},
+  {id:"smof", name:"SMOFKabiven zentral", route:"i.v. · ZVK · 3-Kammer-Beutel", type:"iv",
+   kcal:1100/1000, prot:51/1000, fat:38/1000, cho:127/1000,
+   src:"Fresenius Kabi Fachkurzinformation: 1000 ml enthalten 1100 kcal gesamt (900 kcal Nichteiweißenergie), 51 g Aminosäuren, 127 g Glucose, 38 g Lipide."},
+  {id:"amino10", name:"Aminoven 10%", route:"i.v. · reine Aminosäurenlösung · Baustein PN", type:"iv",
+   kcal:400/1000, prot:100/1000, fat:0, cho:0,
+   src:"Fachinformation Aminoven 10% (Fresenius Kabi): 1000 ml = 100 g Aminosäuren (16,2 g N), 400 kcal/l. Reine AS-Lösung – mit Energieträgern kombinieren."},
+  {id:"amino15", name:"Aminoven 15%", route:"i.v. · reine Aminosäurenlösung · Baustein PN", type:"iv",
+   kcal:600/1000, prot:150/1000, fat:0, cho:0,
+   src:"Fachinformation Aminoven 15% (Fresenius Kabi): 1000 ml = 150 g Aminosäuren (25,7 g N), 600 kcal/l. Bei Kindern kontraindiziert. Mit Energieträgern kombinieren."},
+  {id:"propofol", name:"Propofol 1% / 2%", route:"i.v. · Sedierung · nicht-nutritive Kalorien", type:"iv",
+   kcal:1.1, prot:0, fat:0.1, cho:0,
+   src:"Fachinformation Propofol MCT Fresenius; Anästhesie Nachrichten 2020; pin-up-docs: Sojaöl/MCT-Fettemulsion (~0,1 g Fett/ml), ca. 1,1 kcal/ml – unabhängig von 1% oder 2%. Reine Fettkalorien. Als nicht-nutritive Kalorien einrechnen!"},
+  {id:"fresOF", name:"Fresubin Original Fibre", route:"enteral · Sonde · normokalorisch", type:"enteral",
+   kcal:1.0, prot:3.8/100, fat:3.3/100, cho:13/100,
+   src:"Fresenius Kabi Datenblatt (LMIV 06/2024): pro 100 ml 100 kcal, 3,8 g Eiweiß, 3,3 g Fett, 13 g KH, 1,5 g Ballaststoffe."},
+  {id:"fresHP", name:"Fresubin HP Energy", route:"enteral · Sonde · hochkalorisch/eiweißreich", type:"enteral",
+   kcal:1.5, prot:7.5/100, fat:5.8/100, cho:17/100,
+   src:"Fresenius Kabi Datenblatt (LMIV 06/2024): pro 100 ml 150 kcal, 7,5 g Eiweiß, 5,8 g Fett, 17 g KH, ballaststofffrei."},
+  {id:"supportan", name:"Supportan", route:"enteral · Sonde/Trinknahrung · NICHT i.v.!", type:"enteral",
+   kcal:1.5, prot:10/100, fat:6.7/100, cho:12/100,
+   src:"Fresenius Kabi Produktdaten: pro 100 ml 150 kcal, 10 g Eiweiß, 6,7 g Fett, 12 g KH. ENTERALES Produkt (Sondennahrung/Trinknahrung), keine i.v.-Lösung. Bei parenteraler Alternative Rücksprache mit Apotheke/Klinikstandard."},
+];
+
+const MODES = [
+  {key:"rate", label:"Laufrate", unit:"ml/h", field:null},
+  {key:"kcal", label:"kcal", unit:"kcal/24h", field:"kcal"},
+  {key:"cho",  label:"KH", unit:"g/24h", field:"cho"},
+  {key:"fat",  label:"Fett", unit:"g/24h", field:"fat"},
+  {key:"prot", label:"Eiweiß", unit:"g/24h", field:"prot"},
+];
+
+let state = { mode:"rate", value:0, current:null };
+let balance = []; // {id, name, type, rate}
+
+// ---- Citrat-Dialyse ----
+const KCAL_PER_MMOL = 0.59;   // DGEM S2k-Leitlinie: 0,59 kcal/mmol Trinatriumcitrat (~3 kcal/g)
+const NET_FRACTION = 0.55;    // Netto-Anteil, der beim Patienten ankommt (Rest via Filter ins Dialysat);
+                              // Näherung aus NUTRI-DAY: bei 24 mmol/h zugeführt ~135 kcal/d netto
+let citrat = {
+  active:false,
+  presetKcal:150,             // gewählter Preset-Wert (kcal/Tag)
+  usePreset:true,             // true = Preset, false = genaue Berechnung
+  bloodFlow:100,              // ml/min
+  citrateDose:4,              // mmol Citrat / L Blut
+};
+
+// Ergebnis (netto kcal/Tag) je nach Modus
+function citratKcal(){
+  if(!citrat.active) return 0;
+  if(citrat.usePreset) return citrat.presetKcal;
+  // genaue Rechnung: Blutfluss (ml/min) -> L/h; * Dosis (mmol/L) = mmol/h zugeführt
+  const litersPerHour = (citrat.bloodFlow*60)/1000;
+  const mmolPerHour = litersPerHour * citrat.citrateDose;      // zugeführt
+  const kcalPerDayGross = mmolPerHour * KCAL_PER_MMOL * 24;    // wenn alles metabolisiert
+  return kcalPerDayGross * NET_FRACTION;                        // netto beim Patienten
+}
+
+function fmt(n, d=1){
+  if(n==="n.a.") return "n.a.";
+  if(!isFinite(n)) return "n.a.";
+  return n.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+
+// derive rate (ml/h) from current input mode+value for a product
+function deriveRate(p){
+  const v = state.value||0;
+  if(state.mode==="rate") return v;
+  const perMl = p[state.mode];       // kcal/prot/fat/cho per ml
+  if(!perMl) return null;            // product lacks this macro
+  return v/(perMl*H);
+}
+
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x.dataset.tab===t));
+  document.getElementById("tab-products").classList.toggle("hidden", t!=="products");
+  document.getElementById("tab-detail").classList.add("hidden");
+  document.getElementById("tab-citrat").classList.toggle("hidden", t!=="citrat");
+  document.getElementById("tab-balance").classList.toggle("hidden", t!=="balance");
+  if(t==="balance") renderBalance();
+  if(t==="products") renderList();
+  if(t==="citrat") renderCitrat();
+  window.scrollTo(0,0);
+}
+
+function renderList(){
+  const q = (document.getElementById("search").value||"").toLowerCase();
+  const list = document.getElementById("list");
+  const groups = [["iv","Parenteral (i.v.)"],["enteral","Enteral (Sonde)"]];
+  let html = "";
+  groups.forEach(([type,label])=>{
+    const items = PRODUCTS.filter(p=>p.type===type && p.name.toLowerCase().includes(q));
+    if(!items.length) return;
+    html += `<div class="grouplabel">${label}</div>`;
+    items.forEach(p=>{
+      html += `<div class="card ${p.type}" onclick="openDetail('${p.id}')">
+        <div class="cardtop"><span class="pname">${p.name}</span>
+          <span class="pkcal mono">${fmt(p.kcal*100,0)} kcal/100ml</span></div>
+        <div class="proute">${p.route}</div>
+        <div class="macros">
+          <span class="macro"><span class="dot k"></span>KH <b>${fmt(p.cho*100,1)}</b></span>
+          <span class="macro"><span class="dot f"></span>Fett <b>${fmt(p.fat*100,1)}</b></span>
+          <span class="macro"><span class="dot p"></span>Eiw <b>${fmt(p.prot*100,1)}</b></span>
+          <span class="macro" style="color:var(--faint)">g/100ml</span>
+        </div></div>`;
+    });
+  });
+  list.innerHTML = html || `<div class="empty">Kein Produkt gefunden.</div>`;
+  document.getElementById("disc").textContent =
+    "Alle Nährwerte laut aktuellen Herstellerdatenblättern/Fachinformationen (Stand 2024). Vor klinischer Anwendung anhand der aktuellen Fachinformation / des Klinikstandards prüfen. Citrat-Kalorien bei CRRT lassen sich im Tab Citrat ergänzen.";
+}
+
+function renderCitrat(){
+  const b = document.getElementById("citratbody");
+  const kcal = citratKcal();
+  const litersPerHour = (citrat.bloodFlow*60)/1000;
+  const mmolPerHour = litersPerHour * citrat.citrateDose;
+
+  const presets = [
+    {v:135, l:"Standard", d:"4 mmol/L · Blutfluss ~100 ml/min"},
+    {v:250, l:"Höher dosiert", d:"höherer Blutfluss / Citratdosis"},
+    {v:400, l:"Maximal", d:"grobe Obergrenze"},
+  ];
+
+  b.innerHTML = `
+    <div class="cit-toggle ${citrat.active?'on':''}" onclick="toggleCitrat()">
+      <div>
+        <div class="ct-title">Citrat-Dialyse (CRRT)</div>
+        <div class="ct-sub">${citrat.active?'aktiv – wird in der Bilanz mitgezählt':'aus – tippen zum Aktivieren'}</div>
+      </div>
+      <div class="switch ${citrat.active?'on':''}"><div class="knob"></div></div>
+    </div>
+
+    <div class="${citrat.active?'':'faded'}" ${citrat.active?'':'style="pointer-events:none"'}>
+      <div class="bigresult">
+        <div class="br-l">Nicht-nutritive Kalorien</div>
+        <div class="br-v mono">${fmt(kcal,0)}<span class="br-u">kcal/24h</span></div>
+      </div>
+
+      <div class="seg">
+        <div class="segbtn ${citrat.usePreset?'on':''}" onclick="citMode(true)">Schätzung</div>
+        <div class="segbtn ${!citrat.usePreset?'on':''}" onclick="citMode(false)">Genau berechnen</div>
+      </div>
+
+      ${citrat.usePreset ? `
+        <div class="ilabel" style="margin-bottom:10px">Typische Dosierung wählen</div>
+        ${presets.map(p=>`
+          <div class="preset ${citrat.presetKcal===p.v?'on':''}" onclick="setPreset(${p.v})">
+            <div><div class="pl">${p.l}</div><div class="pd">${p.d}</div></div>
+            <div class="pv mono">${p.v} kcal</div>
+          </div>`).join("")}
+      ` : `
+        <div class="inputwrap" style="margin-top:4px">
+          <div class="numrow">
+            <div class="numlabel">Blutfluss<span>ml/min</span></div>
+            <input class="numin mono" inputmode="decimal" value="${citrat.bloodFlow}" oninput="setBlood(this.value)">
+          </div>
+          <div class="numrow">
+            <div class="numlabel">Citratdosis<span>mmol / L Blut</span></div>
+            <input class="numin mono" inputmode="decimal" value="${citrat.citrateDose}" oninput="setDose(this.value)">
+          </div>
+          <div class="hint">Zugeführt: ${fmt(mmolPerHour,1)} mmol Citrat/h. Netto beim Patienten ca. ${Math.round(NET_FRACTION*100)}% (Rest geht über den Filter ins Dialysat). Faktor: 0,59 kcal/mmol.</div>
+        </div>
+      `}
+
+      <div class="src show" style="margin-top:14px">
+        Grundlage: DGEM S2k-Leitlinie Klinische Ernährung Intensivmedizin – Trinatriumcitrat 0,59 kcal/mmol (≈ 3 kcal/g); typische Zufuhr 11–20 mmol/h ≈ 150–280 kcal/Tag. Netto-Näherung (~55%) nach NUTRI-DAY (Nutrients 2023): bei 24 mmol/h zugeführt ~135 kcal/Tag netto. Werte sind Näherungen und protokoll-/filterabhängig – als grobe Orientierung, nicht als exakte Messung.
+      </div>
+    </div>
+  `;
+}
+
+function toggleCitrat(){ citrat.active=!citrat.active; renderCitrat(); updateCitBadge(); updateBadge(); }
+function citMode(preset){ citrat.usePreset=preset; renderCitrat(); }
+function setPreset(v){ citrat.presetKcal=v; renderCitrat(); }
+function setBlood(v){ citrat.bloodFlow=parseFloat((v||"").replace(",","."))||0; renderCitrat(); }
+function setDose(v){ citrat.citrateDose=parseFloat((v||"").replace(",","."))||0; renderCitrat(); }
+function updateCitBadge(){
+  const el=document.getElementById("citbadge");
+  el.textContent = citrat.active ? "●" : "";
+  el.style.color = "var(--rose)";
+}
+
+function openDetail(id){
+  const p = PRODUCTS.find(x=>x.id===id);
+  state = { mode:"rate", value:0, current:id };
+  document.getElementById("tab-products").classList.add("hidden");
+  document.getElementById("tab-balance").classList.add("hidden");
+  const d = document.getElementById("tab-detail");
+  d.classList.remove("hidden");
+  renderDetail(p);
+  window.scrollTo(0,0);
+}
+
+function renderDetail(p){
+  const d = document.getElementById("tab-detail");
+  const modeBtns = MODES.map(m=>{
+    const disabled = m.field && !p[m.field] ? "disabled" : "";
+    const on = state.mode===m.key ? "on":"";
+    return `<div class="mode ${on} ${disabled}" onclick="setMode('${m.key}')">${m.label}</div>`;
+  }).join("");
+  const curMode = MODES.find(m=>m.key===state.mode);
+
+  d.innerHTML = `
+    <div class="backbtn" onclick="showTab('products')">‹ Produkte</div>
+    <div class="detail-h">${p.name}</div>
+    <div class="detail-route">${p.route}</div>
+
+    <div class="inputwrap">
+      <div class="ilabel">Ich gebe vor</div>
+      <div class="modes">${modeBtns}</div>
+      <div class="bigrow">
+        <input class="biginput mono" id="bigin" inputmode="decimal" placeholder="0"
+          value="${state.value||''}" oninput="onInput(this.value)">
+        <span class="bigunit">${curMode.unit}</span>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <div class="srcbtn" onclick="toggleSrc()">Quelle & Hinweise anzeigen</div>
+    <div class="src" id="src">${p.src}</div>
+
+    <button class="addbtn" onclick="addToBalance('${p.id}')">Zur Tagesbilanz hinzufügen</button>
+  `;
+  renderResults(p);
+}
+
+function setMode(key){
+  const p = PRODUCTS.find(x=>x.id===state.current);
+  const m = MODES.find(x=>x.key===key);
+  if(m.field && !p[m.field]) return;
+  state.mode = key;
+  renderDetail(p);
+  setTimeout(()=>{const el=document.getElementById("bigin"); if(el) el.focus();},50);
+}
+
+function onInput(v){
+  v = v.replace(",",".").replace(/[^0-9.]/g,"");
+  state.value = parseFloat(v)||0;
+  renderResults(PRODUCTS.find(x=>x.id===state.current));
+}
+
+function renderResults(p){
+  const rate = deriveRate(p);
+  const box = document.getElementById("results");
+  const hint = document.getElementById("hint");
+  if(rate===null){
+    box.innerHTML = `<div class="res na full"><div class="rl">Nicht anwendbar</div>
+      <div class="rv">n.a.</div></div>`;
+    if(hint) hint.textContent = "Dieses Produkt enthält diesen Nährstoff nicht.";
+    return;
+  }
+  const kcal = rate*p.kcal*H, prot=rate*p.prot*H, fat=rate*p.fat*H, cho=rate*p.cho*H, vol=rate*H;
+  if(hint){
+    hint.textContent = state.mode==="rate"
+      ? "Kontinuierliche Gabe über 24 h."
+      : `Benötigte Laufrate für dein Ziel, kontinuierlich über 24 h.`;
+  }
+  box.innerHTML = `
+    <div class="res rate"><div class="rl">Laufrate</div><div class="rv mono">${fmt(rate,1)}<span class="ru">ml/h</span></div></div>
+    <div class="res kcal"><div class="rl">Energie</div><div class="rv mono">${fmt(kcal,0)}<span class="ru">kcal</span></div></div>
+    <div class="res"><div class="rl"><span class="dot k"></span>Kohlenhydrate</div><div class="rv mono">${fmt(cho,1)}<span class="ru">g</span></div></div>
+    <div class="res"><div class="rl"><span class="dot f"></span>Fett</div><div class="rv mono">${fmt(fat,1)}<span class="ru">g</span></div></div>
+    <div class="res"><div class="rl"><span class="dot p"></span>Eiweiß</div><div class="rv mono">${fmt(prot,1)}<span class="ru">g</span></div></div>
+    <div class="res"><div class="rl">Volumen</div><div class="rv mono">${fmt(vol,0)}<span class="ru">ml</span></div></div>
+  `;
+}
+
+function toggleSrc(){ document.getElementById("src").classList.toggle("show"); }
+
+function addToBalance(id){
+  const p = PRODUCTS.find(x=>x.id===id);
+  const rate = deriveRate(p);
+  if(rate===null || !rate){ flash("Bitte zuerst einen Wert eingeben."); return; }
+  balance.push({id, name:p.name, type:p.type, rate});
+  updateBadge();
+  flash(`${p.name} hinzugefügt (${fmt(rate,1)} ml/h)`);
+}
+
+function flash(msg){
+  let f=document.getElementById("flash");
+  if(!f){f=document.createElement("div");f.id="flash";
+    f.style.cssText="position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--vital);color:#0d1117;padding:11px 18px;border-radius:12px;font-size:13.5px;font-weight:700;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.4);transition:.25s;max-width:88vw;text-align:center;";
+    document.body.appendChild(f);}
+  f.textContent=msg;f.style.opacity="1";f.style.transform="translateX(-50%) translateY(0)";
+  clearTimeout(f._t);f._t=setTimeout(()=>{f.style.opacity="0";f.style.transform="translateX(-50%) translateY(8px)";},1900);
+}
+
+function updateBadge(){
+  const b=document.getElementById("balcount");
+  const n = balance.length + (citrat.active && citratKcal() ? 1 : 0);
+  b.textContent = n ? `(${n})` : "";
+}
+
+function renderBalance(){
+  const wrap=document.getElementById("balancelist");
+  const citKcal = citratKcal();
+  if(!balance.length && !citKcal){
+    wrap.innerHTML=`<div class="empty">Noch keine Einträge in der Bilanz.<br>
+      Öffne ein Produkt, stell den Wert ein und tippe<br>„Zur Tagesbilanz hinzufügen".<br><br>
+      Citrat-Dialyse aktivierst du im Tab „Citrat".</div>`;
+    return;
+  }
+  let tk=0,tp=0,tf=0,tc=0,tv=0;
+  let html="";
+  balance.forEach((b,i)=>{
+    const p=PRODUCTS.find(x=>x.id===b.id);
+    const kcal=b.rate*p.kcal*H, prot=b.rate*p.prot*H, fat=b.rate*p.fat*H, cho=b.rate*p.cho*H, vol=b.rate*H;
+    tk+=kcal;tp+=prot;tf+=fat;tc+=cho;tv+=vol;
+    html+=`<div class="bitem ${b.type}">
+      <div class="binfo">
+        <div class="bn">${b.name}</div>
+        <div class="bd mono">${fmt(b.rate,1)} ml/h · ${fmt(kcal,0)} kcal · KH ${fmt(cho,1)} · F ${fmt(fat,1)} · E ${fmt(prot,1)} g</div>
+      </div>
+      <div class="brm" onclick="removeItem(${i})">×</div>
+    </div>`;
+  });
+  if(citKcal){
+    tk+=citKcal;
+    html+=`<div class="bitem citrat">
+      <div class="binfo">
+        <div class="bn">Citrat-Dialyse <span style="color:var(--faint);font-weight:400;font-size:11px">nicht-nutritiv</span></div>
+        <div class="bd mono">${fmt(citKcal,0)} kcal · kein KH/Fett/Eiweiß</div>
+      </div>
+      <div class="brm" onclick="toggleCitrat();renderBalance();updateCitBadge()">×</div>
+    </div>`;
+  }
+  html+=`<div class="total">
+    <div class="ttl">Summe · 24 h</div>
+    <div class="tgrid">
+      <div class="tcell kcal"><div class="tl">Energie gesamt</div><div class="tv mono">${fmt(tk,0)} <span style="font-size:13px;color:var(--dim)">kcal</span></div></div>
+      <div class="tcell"><div class="tl">Volumen gesamt</div><div class="tv mono">${fmt(tv,0)} <span style="font-size:13px;color:var(--dim)">ml</span></div></div>
+      <div class="tcell"><div class="tl"><span class="dot k"></span>Kohlenhydrate</div><div class="tv mono">${fmt(tc,1)} <span style="font-size:13px;color:var(--dim)">g</span></div></div>
+      <div class="tcell"><div class="tl"><span class="dot f"></span>Fett</div><div class="tv mono">${fmt(tf,1)} <span style="font-size:13px;color:var(--dim)">g</span></div></div>
+      <div class="tcell"><div class="tl"><span class="dot p"></span>Eiweiß</div><div class="tv mono">${fmt(tp,1)} <span style="font-size:13px;color:var(--dim)">g</span></div></div>
+    </div>
+  </div>
+  <button class="clearbtn" onclick="clearBalance()">Tagesbilanz leeren</button>`;
+  wrap.innerHTML=html;
+}
+
+function removeItem(i){ balance.splice(i,1); updateBadge(); renderBalance(); }
+function clearBalance(){ balance=[]; updateBadge(); renderBalance(); }
+
+renderList();
+updateCitBadge();
+</script>
+</body>
+</html>
