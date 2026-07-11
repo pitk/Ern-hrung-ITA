@@ -385,7 +385,7 @@ function renderCitrat(){
           </div>
           <div class="hint">Zugeführt: ${fmt(mmolPerHour,1)} mmol Citrat/h · Faktor 0,59 kcal/mmol · angenommener Netto-Anteil ${Math.round(NET_FRACTION*100)}%. <b style="color:var(--amber)">Nur grobe Orientierung:</b> die reale Netto-Kalorienzufuhr schwankt studienübergreifend zwischen ~115 und ~1300 kcal/Tag; Glukose- und Lactatverluste über den Filter sind hier nicht berücksichtigt und können die Bilanz deutlich senken oder sogar negativ machen.</div>
       <div class="src show" style="margin-top:14px">
-        Grundlage: DGEM S2k-Leitlinie Klinische Ernährung Intensivmedizin – Trinatriumcitrat 0,59 kcal/mmol (≈ 3 kcal/g); typische Zufuhr 11–20 mmol/h ≈ 150–280 kcal/Tag. Netto-Näherung (~55%) nach NUTRI-DAY (Nutrients 2023): bei 24 mmol/h zugeführt ~135 kcal/Tag netto. Werte sind Näherungen und protokoll-/filterabhängig – als grobe Orientierung, nicht als exakte Messung.
+        Grundlage: Citrat liefert 0,59 kcal/mmol (≈ 3 kcal/g) – gut belegt (u.a. Oudemans-van Straaten, Bench-to-bedside Review Crit Care; chinesischer RCA-Konsensus 2023). Der hier angesetzte Netto-Anteil beim Patienten ist dagegen nur eine grobe Näherung: studienübergreifend reicht die Netto-Kalorienzufuhr durch RCA von ca. 115 bis 1300 kcal/Tag, je nach Modus, Citratdosis, Ersatzlösung und Filter. Für Trinatriumcitrat 4% nennt die NUTRI-DAY-Studie (Nutrients 2023) netto ~135 kcal/Tag post-filter – der kombinierte Netto-Gewinn aus Citrat + Glukose + Lactat lag dort bei nicht-hyperglykämen Patienten aber nur bei ~10 kcal/Tag, weil Glukose über den Filter verlorengeht. Diese Verluste bildet der Rechner nicht ab. Verbindlich ist immer euer CRRT-/Hausprotokoll.
       </div>
     </div>
   `;
