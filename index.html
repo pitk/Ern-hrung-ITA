@@ -383,10 +383,7 @@ function renderCitrat(){
             <div class="numlabel">Citratdosis<span>mmol / L Blut</span></div>
             <input class="numin mono" inputmode="decimal" value="${citrat.citrateDose}" oninput="setDose(this.value)">
           </div>
-          <div class="hint">Zugeführt: ${fmt(mmolPerHour,1)} mmol Citrat/h. Netto beim Patienten ca. ${Math.round(NET_FRACTION*100)}% (Rest geht über den Filter ins Dialysat). Faktor: 0,59 kcal/mmol.</div>
-        </div>
-      `}
-
+          <div class="hint">Zugeführt: ${fmt(mmolPerHour,1)} mmol Citrat/h · Faktor 0,59 kcal/mmol · angenommener Netto-Anteil ${Math.round(NET_FRACTION*100)}%. <b style="color:var(--amber)">Nur grobe Orientierung:</b> die reale Netto-Kalorienzufuhr schwankt studienübergreifend zwischen ~115 und ~1300 kcal/Tag; Glukose- und Lactatverluste über den Filter sind hier nicht berücksichtigt und können die Bilanz deutlich senken oder sogar negativ machen.</div>
       <div class="src show" style="margin-top:14px">
         Grundlage: DGEM S2k-Leitlinie Klinische Ernährung Intensivmedizin – Trinatriumcitrat 0,59 kcal/mmol (≈ 3 kcal/g); typische Zufuhr 11–20 mmol/h ≈ 150–280 kcal/Tag. Netto-Näherung (~55%) nach NUTRI-DAY (Nutrients 2023): bei 24 mmol/h zugeführt ~135 kcal/Tag netto. Werte sind Näherungen und protokoll-/filterabhängig – als grobe Orientierung, nicht als exakte Messung.
       </div>
